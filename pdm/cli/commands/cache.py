@@ -33,11 +33,11 @@ def format_size(size: float) -> str:
     if size > 1000 * 1000:
         return "{:.1f} MB".format(size / 1000.0 / 1000)
     elif size > 10 * 1000:
-        return "{} kB".format(int(size / 1000))
+        return f"{int(size / 1000)} kB"
     elif size > 1000:
         return "{:.1f} kB".format(size / 1000.0)
     else:
-        return "{} bytes".format(int(size))
+        return f"{int(size)} bytes"
 
 
 def remove_cache_files(project: Project, pattern: str) -> None:
@@ -107,8 +107,8 @@ class ClearCommand(BaseCommand):
 
         packages = files = 0
         with project.core.ui.open_spinner(
-            f"Clearing {options.type or 'all'} caches..."
-        ) as spinner:
+                f"Clearing {options.type or 'all'} caches..."
+            ) as spinner:
             for type_ in types:
                 if type_ == "packages":
                     packages += self._clear_packages(project.cache(type_))
@@ -119,10 +119,12 @@ class ClearCommand(BaseCommand):
                 message.append(f"{packages} package{'s' if packages > 1 else ''}")
             if files:
                 message.append(f"{files} file{'s' if files > 1 else ''}")
-            if not message:  # pragma: no cover
-                text = "No files need to be removed"
-            else:
-                text = f"{' and '.join(message)} are removed"
+            text = (
+                f"{' and '.join(message)} are removed"
+                if message
+                else "No files need to be removed"
+            )
+
             spinner.succeed(text)
 
 

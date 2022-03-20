@@ -66,13 +66,7 @@ if WINDOWS:
         buf = ctypes.create_unicode_buffer(1024)
         ctypes.windll.shell32.SHGetFolderPathW(None, csidl_const, None, 0, buf)
 
-        # Downgrade to short path name if have highbit chars. See
-        # <http://bugs.activestate.com/show_bug.cgi?id=85099>.
-        has_high_char = False
-        for c in buf:
-            if ord(c) > 255:
-                has_high_char = True
-                break
+        has_high_char = any(ord(c) > 255 for c in buf)
         if has_high_char:
             buf2 = ctypes.create_unicode_buffer(1024)
             if ctypes.windll.kernel32.GetShortPathNameW(buf.value, buf2, 1024):
@@ -146,9 +140,9 @@ def _add_to_path(target: Path) -> None:
                 winreg.SetValueEx(env_key, "PATH", 0, type_, new_value)
 
         _echo(
-            "Post-install: {} is added to PATH env, please restart your terminal "
-            "to take effect".format(colored("green", value))
+            f'Post-install: {colored("green", value)} is added to PATH env, please restart your terminal to take effect'
         )
+
     else:
         paths = [os.path.normcase(p) for p in os.getenv("PATH", "").split(os.pathsep)]
         if value in paths:
@@ -166,9 +160,10 @@ def support_ansi() -> bool:
         return (
             os.getenv("ANSICON") is not None
             or os.getenv("WT_SESSION") is not None
-            or "ON" == os.getenv("ConEmuANSI")
-            or "xterm" == os.getenv("Term")
+            or os.getenv("ConEmuANSI") == "ON"
+            or os.getenv("Term") == "xterm"
         )
+
 
     if not hasattr(sys.stdout, "fileno"):
         return False
@@ -238,12 +233,9 @@ class Installer:
         venv_path = self._path / "venv"
 
         _echo(
-            "Installing {} ({}): {}".format(
-                colored("green", "PDM", bold=True),
-                colored("yellow", self.version),
-                colored("cyan", "Creating virtual environment"),
-            )
+            f'Installing {colored("green", "PDM", bold=True)} ({colored("yellow", self.version)}): {colored("cyan", "Creating virtual environment")}'
         )
+
 
         try:
             import venv
@@ -308,13 +300,9 @@ class Installer:
             bin_path = userbase / ("Scripts" if WINDOWS else "bin")
 
         _echo(
-            "Installing {} ({}): {} {}".format(
-                colored("green", "PDM", bold=True),
-                colored("yellow", self.version),
-                colored("cyan", "Making binary at"),
-                colored("green", str(bin_path)),
-            )
+            f'Installing {colored("green", "PDM", bold=True)} ({colored("yellow", self.version)}): {colored("cyan", "Making binary at")} {colored("green", str(bin_path))}'
         )
+
         bin_path.mkdir(parents=True, exist_ok=True)
         if WINDOWS:
             script = bin_path / "pdm.exe"
@@ -332,19 +320,13 @@ class Installer:
         return bin_path
 
     def _post_install(self, venv_path: Path, bin_path: Path) -> None:
-        if WINDOWS:
-            script = bin_path / "pdm.exe"
-        else:
-            script = bin_path / "pdm"
+        script = bin_path / "pdm.exe" if WINDOWS else bin_path / "pdm"
         subprocess.check_call([str(script), "--help"])
         print()
         _echo(
-            "Successfully installed: {} ({}) at {}".format(
-                colored("green", "PDM", bold=True),
-                colored("yellow", self.version),
-                colored("cyan", str(script)),
-            )
+            f'Successfully installed: {colored("green", "PDM", bold=True)} ({colored("yellow", self.version)}) at {colored("cyan", str(script))}'
         )
+
         _add_to_path(bin_path)
 
     def install(self) -> None:
@@ -355,22 +337,16 @@ class Installer:
 
     def uninstall(self) -> None:
         _echo(
-            "Uninstalling {}: {}".format(
-                colored("green", "PDM", bold=True),
-                colored("cyan", "Removing venv and script"),
-            )
+            f'Uninstalling {colored("green", "PDM", bold=True)}: {colored("cyan", "Removing venv and script")}'
         )
+
         if self.location:
             bin_path = self._path / "bin"
         else:
             userbase = Path(site.getuserbase())
             bin_path = userbase / ("Scripts" if WINDOWS else "bin")
 
-        if WINDOWS:
-            script = bin_path / "pdm.exe"
-        else:
-            script = bin_path / "pdm"
-
+        script = bin_path / "pdm.exe" if WINDOWS else bin_path / "pdm"
         shutil.rmtree(self._path / "venv")
         script.unlink()
 

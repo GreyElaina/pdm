@@ -300,10 +300,9 @@ def do_update(
             )
             if not matched_name:
                 raise ProjectError(
-                    "{} does not exist in {} {}dependencies.".format(
-                        termui.green(name, bold=True), group, "dev-" if dev else ""
-                    )
+                    f'{termui.green(name, bold=True)} does not exist in {group} {"dev-" if dev else ""}dependencies.'
                 )
+
             dependencies[matched_name].prerelease = prerelease
             updated_deps[group][matched_name] = dependencies[matched_name]
         project.core.ui.echo(
@@ -381,10 +380,9 @@ def do_remove(
         )
         if not matched_indexes:
             raise ProjectError(
-                "{} does not exist in {} dependencies.".format(
-                    termui.green(name, bold=True), group
-                )
+                f"{termui.green(name, bold=True)} does not exist in {group} dependencies."
             )
+
         for i in matched_indexes:
             del deps[i]
 
@@ -756,10 +754,7 @@ def get_latest_version(project: Project) -> str | None:
 
     cache_key = hashlib.sha224(sys.executable.encode()).hexdigest()
     cache_file = project.cache("self-check") / cache_key
-    if cache_file.exists():
-        state = json.loads(cache_file.read_text())
-    else:
-        state = {}
+    state = json.loads(cache_file.read_text()) if cache_file.exists() else {}
     current_time = datetime.datetime.utcnow().timestamp()
     if (
         state.get("last-check")

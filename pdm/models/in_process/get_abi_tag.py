@@ -65,7 +65,7 @@ if __name__ == "__main__":
             warn=False,
         ):
             u = "u"
-        abi = "%s%s%s%s%s" % (impl, "".join(map(str, python_version)), d, m, u)
+        abi = f'{impl}{"".join(map(str, python_version))}{d}{m}{u}'
     elif soabi and soabi.startswith("cpython-"):
         abi = "cp" + soabi.split("-")[1]
     elif soabi:

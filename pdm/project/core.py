@@ -76,10 +76,13 @@ class Project:
 
         if root_path is None:
             root_path = (
-                find_project_root(max_depth=self.global_config["project_max_depth"])
-                if not is_global
-                else self.GLOBAL_PROJECT
+                self.GLOBAL_PROJECT
+                if is_global
+                else find_project_root(
+                    max_depth=self.global_config["project_max_depth"]
+                )
             )
+
         if not is_global and root_path is None and self.global_config["auto_global"]:
             self.core.ui.echo(
                 "Project is not found, fallback to the global project",
@@ -198,9 +201,7 @@ class Project:
                 return py_version
 
         raise NoPythonVersion(
-            "No Python that satisfies {} is found on the system.".format(
-                self.python_requires
-            )
+            f"No Python that satisfies {self.python_requires} is found on the system."
         )
 
     def get_environment(self) -> Environment:
@@ -312,7 +313,7 @@ class Project:
                     "name": "pypi",
                 },
             )
-        expanded_sources: list[Source] = [
+        return [
             Source(
                 url=expand_env_vars_in_auth(s["url"]),
                 verify_ssl=s.get("verify_ssl", True),
@@ -321,7 +322,6 @@ class Project:
             )
             for s in sources
         ]
-        return expanded_sources
 
     def get_repository(self, cls: Type[BaseRepository] | None = None) -> BaseRepository:
         """Get the repository object"""
@@ -477,15 +477,14 @@ class Project:
         """Get the dependencies array in the pyproject.toml"""
         if group == "default":
             return self.meta.setdefault("dependencies", [])
-        else:
-            deps_dict = {
-                False: self.meta.setdefault("optional-dependencies", {}),
-                True: self.tool_settings.setdefault("dev-dependencies", {}),
-            }
-            for deps in deps_dict.values():
-                if group in deps:
-                    return deps[group]
-            return deps_dict[dev].setdefault(group, [])
+        deps_dict = {
+            False: self.meta.setdefault("optional-dependencies", {}),
+            True: self.tool_settings.setdefault("dev-dependencies", {}),
+        }
+        for deps in deps_dict.values():
+            if group in deps:
+                return deps[group]
+        return deps_dict[dev].setdefault(group, [])
 
     def add_dependencies(
         self,
@@ -587,23 +586,19 @@ dependencies = ["pip", "setuptools", "wheel"]
                 elif os.path.exists(pyenv_shim.replace("python3", "python")):
                     yield PythonInfo.from_path(pyenv_shim.replace("python3", "python"))
             if config.get("python.use_venv"):
-                python = get_in_project_venv_python(self.root)
-                if python:
+                if python := get_in_project_venv_python(self.root):
                     yield PythonInfo.from_path(python)
-            python = shutil.which("python")
-            if python:
+            if python := shutil.which("python"):
                 yield PythonInfo.from_path(python)
             args = []
         else:
             if not all(c.isdigit() for c in python_spec.split(".")):
                 if Path(python_spec).exists():
                     python = find_python_in_path(python_spec)
-                    if python:
-                        yield PythonInfo.from_path(python)
                 else:
                     python = shutil.which(python_spec)
-                    if python:
-                        yield PythonInfo.from_path(python)
+                if python:
+                    yield PythonInfo.from_path(python)
                 return
             args = [int(v) for v in python_spec.split(".") if v != ""]
         finder = Finder(resolve_symlinks=True)

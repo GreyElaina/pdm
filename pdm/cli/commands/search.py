@@ -47,10 +47,10 @@ def print_results(
             if normalize_name(name) in working_set:
                 dist = working_set[normalize_name(name)]
                 if dist.version == latest:
-                    ui.echo("  INSTALLED: %s (latest)" % dist.version)
+                    ui.echo(f"  INSTALLED: {dist.version} (latest)")
                 else:
-                    ui.echo("  INSTALLED: %s" % dist.version)
-                    ui.echo("  LATEST:    %s" % latest)
+                    ui.echo(f"  INSTALLED: {dist.version}")
+                    ui.echo(f"  LATEST:    {latest}")
         except UnicodeEncodeError:
             pass
 
@@ -65,9 +65,7 @@ class Command(BaseCommand):
 
     def handle(self, project: Project, options: argparse.Namespace) -> None:
         result = project.get_repository().search(options.query)
-        terminal_width = None
-        if sys.stdout.isatty():
-            terminal_width = get_terminal_size()[0]
+        terminal_width = get_terminal_size()[0] if sys.stdout.isatty() else None
         print_results(
             project.core.ui,
             result,

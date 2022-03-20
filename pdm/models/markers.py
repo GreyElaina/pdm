@@ -19,9 +19,7 @@ class Marker(PackageMarker):
         return inst
 
     def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, PackageMarker):
-            return False
-        return str(self) == str(other)
+        return str(self) == str(other) if isinstance(other, PackageMarker) else False
 
     def split_pyspec(self) -> Tuple[Optional["Marker"], PySpecSet]:
         """Split `python_version` and `python_full_version` from marker string"""
@@ -39,12 +37,11 @@ class Marker(PackageMarker):
             for marker in self._markers
             if marker != "and" and marker not in py_markers
         ]
-        new_markers = join_list_with(rest, "and")
-        if not new_markers:
-            marker = None
-        else:
+        if new_markers := join_list_with(rest, "and"):
             marker = self.copy()
             marker._markers = new_markers
+        else:
+            marker = None
         return marker, _build_pyspec_from_marker(join_list_with(py_markers, "and"))
 
 
@@ -60,13 +57,10 @@ def split_marker_extras(marker: str) -> Tuple[Set[str], str]:
 
     def extract_extras(submarker: Union[tuple, list]) -> Set[str]:
         if isinstance(submarker, tuple):
-            if submarker[0].value == "extra":
-                if submarker[1].value == "==":
-                    return {submarker[2].value}
-                elif submarker[1].value == "in":
-                    return {v.strip() for v in submarker[2].value.split(",")}
-                else:
-                    return set()
+            if submarker[0].value == "extra" and submarker[1].value == "==":
+                return {submarker[2].value}
+            elif submarker[0].value == "extra" and submarker[1].value == "in":
+                return {v.strip() for v in submarker[2].value.split(",")}
             else:
                 return set()
         else:

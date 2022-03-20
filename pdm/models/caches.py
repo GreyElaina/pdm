@@ -79,9 +79,7 @@ class CandidateInfoCache(JSONFileCache[Candidate, CandidateInfo]):
         # so use them for cache key. Local directories won't be cached.
         if not obj.name or not obj.version:
             raise KeyError
-        extras = (
-            "[{}]".format(",".join(sorted(obj.req.extras))) if obj.req.extras else ""
-        )
+        extras = f'[{",".join(sorted(obj.req.extras))}]' if obj.req.extras else ""
         return f"{obj.name}{extras}-{obj.version}"
 
 

@@ -15,9 +15,7 @@ class Command(BaseCommand):
 
     @staticmethod
     def ask(question: str, default: str, use_default: bool = False) -> str:
-        if use_default:
-            return default
-        return click.prompt(question, default=default)
+        return default if use_default else click.prompt(question, default=default)
 
     def add_arguments(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
@@ -31,14 +29,11 @@ class Command(BaseCommand):
     def handle(self, project: Project, options: argparse.Namespace) -> None:
         if project.pyproject_file.exists():
             project.core.ui.echo(
-                "{}".format(
-                    termui.cyan("pyproject.toml already exists, update it now.")
-                )
+                f'{termui.cyan("pyproject.toml already exists, update it now.")}'
             )
+
         else:
-            project.core.ui.echo(
-                "{}".format(termui.cyan("Creating a pyproject.toml for PDM..."))
-            )
+            project.core.ui.echo(f'{termui.cyan("Creating a pyproject.toml for PDM...")}')
         non_interactive = options.non_interactive
         if non_interactive:
             actions.do_use(project, "3", True)

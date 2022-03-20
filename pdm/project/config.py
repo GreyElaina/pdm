@@ -28,7 +28,7 @@ def load_config(file_path: Path) -> Dict[str, Any]:
                     {f"{k}.{sub_k}": sub_v for sub_k, sub_v in get_item(v).items()}
                 )
             else:
-                result.update({k: v})
+                result[k] = v
         return result
 
     if not file_path.is_file():
@@ -38,10 +38,11 @@ def load_config(file_path: Path) -> Dict[str, Any]:
 
 def ensure_boolean(val: Any) -> bool:
     """Coerce a string value to a boolean value"""
-    if not isinstance(val, str):
-        return val
-
-    return bool(val) and val.lower() not in ("false", "no", "0")
+    return (
+        bool(val) and val.lower() not in ("false", "no", "0")
+        if isinstance(val, str)
+        else val
+    )
 
 
 @dataclasses.dataclass
@@ -211,13 +212,12 @@ class Config(MutableMapping[str, str]):
         env_var = config.env_var
         if env_var is not None and env_var in os.environ:
             result = os.environ[env_var]
+        elif config_key in self._data:
+            result = self._data[config_key]
+        elif config.replace:
+            result = self._data[config.replace]
         else:
-            if config_key in self._data:
-                result = self._data[config_key]
-            elif config.replace:
-                result = self._data[config.replace]
-            else:
-                raise NoConfigError(key) from None
+            raise NoConfigError(key) from None
         return config.coerce(result)
 
     def __setitem__(self, key: str, value: Any) -> None:
@@ -235,10 +235,10 @@ class Config(MutableMapping[str, str]):
         if env_var is not None and env_var in os.environ:
             click.echo(
                 termui.yellow(
-                    "WARNING: the config is shadowed by env var '{}', "
-                    "the value set won't take effect.".format(env_var)
+                    f"WARNING: the config is shadowed by env var '{env_var}', the value set won't take effect."
                 )
             )
+
         self._data[config_key] = value
         self._file_data[config_key] = value
         if config.replace:
@@ -273,8 +273,8 @@ class Config(MutableMapping[str, str]):
         if env_var is not None and env_var in os.environ:
             click.echo(
                 termui.yellow(
-                    "WARNING: the config is shadowed by env var '{}', "
-                    "set value won't take effect.".format(env_var)
+                    f"WARNING: the config is shadowed by env var '{env_var}', set value won't take effect."
                 )
             )
+
         self._save_config()

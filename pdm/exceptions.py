@@ -62,7 +62,7 @@ class UninstallError(PdmException):
 
 class NoConfigError(PdmException, KeyError):
     def __init__(self, key: str) -> None:
-        super().__init__("No such config item: {}".format(key))
+        super().__init__(f"No such config item: {key}")
 
 
 class NoPythonVersion(PdmException):

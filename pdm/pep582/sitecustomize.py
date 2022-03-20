@@ -8,7 +8,7 @@ def get_pypackages_path(maxdepth=5):
         if not os.path.exists(path):
             return None
 
-        packages_name = "__pypackages__/{}/lib".format(version)
+        packages_name = f"__pypackages__/{version}/lib"
         for _ in range(maxdepth):
             if os.path.exists(os.path.join(path, packages_name)):
                 return os.path.join(path, packages_name)
@@ -91,10 +91,7 @@ def patch_sysconfig(libpath):
         @functools.wraps(get_paths)
         def wrapper(scheme=None, vars=None, expand=True):
             default_scheme = get_paths.__defaults__[0]
-            if not vars and scheme is None:
-                scheme = "pep582"
-            else:
-                scheme = scheme or default_scheme
+            scheme = "pep582" if not vars and scheme is None else scheme or default_scheme
             return get_paths(scheme, vars, expand)
 
         return wrapper

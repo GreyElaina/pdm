@@ -72,8 +72,7 @@ class TaskRunner:
                     f"Script type must be one of ({', '.join(self.TYPES)})"
                 )
             options = script.copy()
-        unknown_options = set(options) - set(self.OPTIONS)
-        if unknown_options:
+        if unknown_options := set(options) - set(self.OPTIONS):
             raise PdmUsageError(
                 f"Unknown options for task {script_name}: {', '.join(unknown_options)}"
             )
@@ -202,23 +201,22 @@ class TaskRunner:
 
     def run(self, command: str, args: Sequence[str]) -> int:
         task = self._get_task(command)
-        if task is not None:
-            pre_task = self._get_task(f"pre_{command}")
-            if pre_task is not None:
-                code = self._run_task(pre_task)
-                if code != 0:
-                    return code
-            code = self._run_task(task, args)
-            if code != 0:
-                return code
-            post_task = self._get_task(f"post_{command}")
-            if post_task is not None:
-                code = self._run_task(post_task)
-            return code
-        else:
+        if task is None:
             return self._run_process(
                 [command] + args, **self.global_options  # type: ignore
             )
+        pre_task = self._get_task(f"pre_{command}")
+        if pre_task is not None:
+            code = self._run_task(pre_task)
+            if code != 0:
+                return code
+        code = self._run_task(task, args)
+        if code != 0:
+            return code
+        post_task = self._get_task(f"post_{command}")
+        if post_task is not None:
+            code = self._run_task(post_task)
+        return code
 
     def show_list(self) -> None:
         if not self.project.scripts:

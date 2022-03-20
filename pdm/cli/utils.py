@@ -90,16 +90,15 @@ class PdmFormatter(argparse.HelpFormatter):
             help_text = self._expand_help(action)
             help_lines = self._split_lines(help_text, help_width)
             parts.append("%*s%s\n" % (indent_first, "", help_lines[0]))
-            for line in help_lines[1:]:
-                parts.append("%*s%s\n" % (help_position, "", line))
-
-        # or add a newline if the description doesn't end with one
+            parts.extend("%*s%s\n" % (help_position, "", line) for line in help_lines[1:])
         elif not action_header.endswith("\n"):
             parts.append("\n")
 
         # if there are any sub-actions, add their help as well
-        for subaction in self._iter_indented_subactions(action):
-            parts.append(self._format_action(subaction))
+        parts.extend(
+            self._format_action(subaction)
+            for subaction in self._iter_indented_subactions(action)
+        )
 
         # return a single string
         return self._join_parts(parts)
@@ -122,9 +121,7 @@ class Package:
         return f"<Package {self.name}=={self.version}>"
 
     def __eq__(self, value: object) -> bool:
-        if not isinstance(value, Package):
-            return False
-        return self.name == value.name
+        return self.name == value.name if isinstance(value, Package) else False
 
 
 def build_dependency_graph(
@@ -204,20 +201,22 @@ def format_package(
     :param prefix: prefix text for children
     :param visited: the visited package collection
     """
-    result = []
     version = (
-        termui.red("[ not installed ]")
-        if not package.version
-        else termui.red(package.version)
-        if required
-        and required not in ("Any", "This project")
-        and not SpecifierSet(required).contains(package.version)
-        else termui.yellow(package.version)
+        (
+            termui.red(package.version)
+            if required
+            and required not in ("Any", "This project")
+            and not SpecifierSet(required).contains(package.version)
+            else termui.yellow(package.version)
+        )
+        if package.version
+        else termui.red("[ not installed ]")
     )
+
     if package.name in visited:
         version = termui.red("[circular]")
     required = f"[ required: {required} ]" if required else "[ Not required ]"
-    result.append(f"{termui.green(package.name, bold=True)} {version} {required}\n")
+    result = [f"{termui.green(package.name, bold=True)} {version} {required}\n"]
     if package.name in visited:
         return "".join(result)
     children = sorted(graph.iter_children(package), key=lambda p: p.name)
@@ -478,15 +477,17 @@ def save_version_specifiers(
     for reqs in requirements.values():
         for name, r in reqs.items():
             if r.is_named and not r.specifier:
-                if save_strategy == "exact":
-                    r.specifier = get_specifier(f"=={resolved[name].version}")
-                elif save_strategy == "compatible":
+                if save_strategy == "compatible":
                     version = str(resolved[name].version)
                     parsed = parse_version(version)
-                    if parsed.is_prerelease or parsed.is_devrelease:
-                        r.specifier = get_specifier(f">={version},<{parsed.major + 1}")
-                    else:
-                        r.specifier = get_specifier(f"~={parsed.major}.{parsed.minor}")
+                    r.specifier = (
+                        get_specifier(f">={version},<{parsed.major + 1}")
+                        if parsed.is_prerelease or parsed.is_devrelease
+                        else get_specifier(f"~={parsed.major}.{parsed.minor}")
+                    )
+
+                elif save_strategy == "exact":
+                    r.specifier = get_specifier(f"=={resolved[name].version}")
                 elif save_strategy == "minimum":
                     r.specifier = get_specifier(f">={resolved[name].version}")
 
@@ -612,10 +613,7 @@ def translate_groups(
         groups_set.update(optional_groups)
     if default:
         groups_set.add("default")
-    # Sorts the result in ascending order instead of in random order
-    # to make this function pure
-    invalid_groups = groups_set - set(project.iter_groups())
-    if invalid_groups:
+    if invalid_groups := groups_set - set(project.iter_groups()):
         project.core.ui.echo(
             f"Ignoring non-existing groups: {invalid_groups}", fg="yellow", err=True
         )
@@ -630,14 +628,16 @@ def merge_dictionary(
     properly. This will update the target dictionary in place.
     """
     for key, value in input.items():
-        if key not in target:
+        if (
+            key not in target
+            or not isinstance(value, dict)
+            and not isinstance(value, list)
+        ):
             target[key] = value
         elif isinstance(value, dict):
             target[key].update(value)
-        elif isinstance(value, list):
-            target[key].extend(value)
         else:
-            target[key] = value
+            target[key].extend(value)
 
 
 def is_pipx_installation() -> bool:

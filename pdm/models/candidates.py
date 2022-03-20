@@ -242,12 +242,7 @@ class PreparedCandidate:
     @cached_property
     def revision(self) -> str:
         if not (self.ireq.source_dir and os.path.exists(self.ireq.source_dir)):
-            # It happens because the cached wheel is hit and the source code isn't
-            # pulled to local. In this case the link url must contain the full commit
-            # hash which can be taken as the revision safely.
-            # See more info at https://github.com/pdm-project/pdm/issues/349
-            rev = get_rev_from_url(self.ireq.original_link.url)  # type: ignore
-            if rev:
+            if rev := get_rev_from_url(self.ireq.original_link.url):
                 return rev
         return vcs.get_backend(self.req.vcs).get_revision(  # type: ignore
             cast(str, self.ireq.source_dir)
@@ -318,8 +313,7 @@ class PreparedCandidate:
         self.obtain(allow_all=False)
         if self.wheel:
             return self.wheel
-        cached = self._get_cached_wheel()
-        if cached:
+        if cached := self._get_cached_wheel():
             self.wheel = cached.file_path
             return self.wheel  # type: ignore
         assert self.ireq.source_dir, "Source directory isn't ready yet"
@@ -338,12 +332,13 @@ class PreparedCandidate:
         :param allow_all: If true, don't validate the wheel tag nor hashes
         """
         ireq = self.ireq
-        if self.wheel:
-            if self._wheel_compatible(self.wheel, allow_all):
-                return
-        elif ireq.source_dir:
+        if (
+            self.wheel
+            and self._wheel_compatible(self.wheel, allow_all)
+            or not self.wheel
+            and ireq.source_dir
+        ):
             return
-
         if not allow_all and self.candidate.hashes:
             ireq.hash_options = convert_hashes(self.candidate.hashes)
         with self.environment.get_finder(ignore_requires_python=True) as finder:
@@ -360,8 +355,7 @@ class PreparedCandidate:
                 if not ireq.original_link:
                     ireq.original_link = ireq.link
             if allow_all and not self.req.editable:
-                cached = self._get_cached_wheel()
-                if cached:
+                if cached := self._get_cached_wheel():
                     self.wheel = cached.file_path
                     return
             downloader = pip_shims.Downloader(finder.session, "off")  # type: ignore
@@ -474,10 +468,7 @@ class PreparedCandidate:
                 venv_prefix = get_venv_like_prefix(
                     self.environment.interpreter.executable
                 )
-                if venv_prefix is not None:
-                    src_dir = venv_prefix / "src"
-                else:
-                    src_dir = Path("src")
+                src_dir = venv_prefix / "src" if venv_prefix is not None else Path("src")
             if not src_dir.is_dir():
                 src_dir.mkdir()
             ireq.ensure_has_source_dir(str(src_dir))

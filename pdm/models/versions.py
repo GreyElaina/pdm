@@ -66,9 +66,11 @@ class Version:
         return f"<Version({self})>"
 
     def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, Version):
-            return NotImplemented
-        return self._version == other._version
+        return (
+            self._version == other._version
+            if isinstance(other, Version)
+            else NotImplemented
+        )
 
     def __lt__(self, other: Any) -> bool:
         if not isinstance(other, Version):

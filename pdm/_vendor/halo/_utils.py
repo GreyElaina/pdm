@@ -139,7 +139,4 @@ def get_terminal_columns():
 
     # If column size is 0 either we are not connected
     # to a terminal or something else went wrong. Fallback to 80.
-    if terminal_size.columns == 0:
-        return 80
-    else:
-        return terminal_size.columns
+    return 80 if terminal_size.columns == 0 else terminal_size.columns

@@ -120,14 +120,13 @@ class BaseProvider(AbstractProvider):
         return self._find_candidates(parse_requirement(req))
 
     def _find_candidates(self, requirement: Requirement) -> Iterable[Candidate]:
-        if not requirement.is_named:
-            can = Candidate(requirement)
-            can.prepare(self.repository.environment).prepare_metadata()
-            return [can]
-        else:
+        if requirement.is_named:
             return self.repository.find_candidates(
                 requirement, requirement.prerelease or self.allow_prereleases
             )
+        can = Candidate(requirement)
+        can.prepare(self.repository.environment).prepare_metadata()
+        return [can]
 
     def find_matches(
         self,
